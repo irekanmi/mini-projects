@@ -1,0 +1,28 @@
+body{
+  margin: 0;
+}
+
+.container,
+.container *{
+  font-family: sans-serif;
+}
+.title{
+  margin-top: 0px;
+  margin-bottom: 25px;
+}
+.container{
+  width: 400px;
+  margin: 25px;
+  padding: 25px;
+  border: 1px solid #cccccc;
+  border-radius: 5px;
+  line-height: 1.4;
+}
+.text-input{
+  width: 100%;
+  margin-bottom: 25px;
+  resize: none;
+  height: 225px;
+  padding: 10px;
+  box-sizing: border-box;
+}

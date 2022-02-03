@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Resizer</title>
+  <link rel="stylesheet" href="src/main.css">
+  <script src="src/main.js" defer></script>
+</head>
+<body>
+  <div class="resizer">
+    <input type="file" class="resizer__file">
+    <div class="dimensions">
+      <input type="text" class="resizer__input--width" value="0">
+      x
+      <input type="text" class="resizer__input--height" value="0">
+      <label >
+        <input class="resizer__aspect" type="checkbox" checked>
+        Keep Aspect Ratio
+      </label>
+    </div>
+    <canvas class="resizer__canvas" width="500" height="500" ></canvas>
+  </div>
+</body>
+</html>
