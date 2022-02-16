@@ -1,5 +1,6 @@
-### Mini Projects
-[(Javascript)]
+#### Mini Projects
+
+##Javascript
 
 
 Canvas
