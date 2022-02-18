@@ -7,16 +7,20 @@ canvas.height = 600;
 // global variables
 const cellSize = 100;
 const cellGap = 3;
-let numberOfresources = 1000;
+let numberOfresources = 300;
 let frame = 0;
 let enemyInterval = 600;
 let gameOver = false;
 let score = 0;
+let winningScore = 20;
+
+const resources = [];
 const gameGrid = [];
 const defenders = [];
 const enemies = [];
 const enemyPositions = [];
 const projectiles = [];
+const floatingMessages = [];
 
 // mouse
 const mouse = {
@@ -32,9 +36,44 @@ canvas.addEventListener("mousemove", function (e) {
   mouse.y = e.y - canvasPosition.top;
 });
 canvas.addEventListener("mouseleave", function (e) {
-  mouse.x = undefined;
-  mouse.y = undefined;
+  mouse.x = 10;
+  mouse.y = 10;
 });
+
+// floating messages
+class floatingMessage {
+  constructor(value, x, y, size) {
+    this.x = x;
+    this.y = y;
+    this.opacity = 1;
+    this.color = `rgba(0,0,0,${this.opacity})`;
+    this.life = 50;
+    this.value = value;
+    this.size = size;
+  }
+  update() {
+    if (this.opacity > 0.01) {
+      this.opacity -= 0.02;
+    }
+    this.life -= 0.5;
+    this.y--;
+  }
+  draw() {
+    ctx.font = `${this.size}px Arial`;
+    ctx.fillStyle = this.color;
+    ctx.fillText(this.value, this.x, this.y);
+  }
+}
+function handleFloatingMessage() {
+  for (let i = 0; i < floatingMessages.length; i++) {
+    floatingMessages[i].update();
+    floatingMessages[i].draw();
+    if (floatingMessages[i].life < 1) {
+      floatingMessages.splice(i, 1);
+      i--;
+    }
+  }
+}
 
 // game board
 const controlsBar = {
@@ -151,6 +190,10 @@ canvas.addEventListener("click", function (e) {
   if (numberOfresources >= defendersCost) {
     defenders.push(new Defender(gridPostionX, gridPostionY));
     numberOfresources -= defendersCost;
+  } else {
+    floatingMessages.push(
+      new floatingMessage("Not enough resources", mouse.x, mouse.y, 20)
+    );
   }
 });
 
@@ -217,11 +260,19 @@ function handleEnemies() {
     enemies[i].draw();
     for (let j = 0; j < projectiles.length; j++) {
       if (enemies[i] && enemies[i].health <= 0) {
-        let findIndex = enemies.indexOf(enemies[i].y);
         enemyPositions.splice(i, 1);
         console.log(enemyPositions);
 
         let gainedResources = enemies[i].total / 2;
+        floatingMessages.push(
+          new floatingMessage(gainedResources, enemies[i].x, enemies[i].y, 15)
+        );
+        floatingMessages.push(
+          new floatingMessage(gainedResources, 100, 42, 25)
+        );
+        floatingMessages.push(
+          new floatingMessage(gainedResources, 100, 72, 25)
+        );
         enemies.splice(i, 1);
         i--;
         numberOfresources += gainedResources;
@@ -243,6 +294,63 @@ function handleEnemies() {
 }
 
 // resources
+const amount = [20, 30, 40];
+
+class Resources {
+  constructor() {
+    this.x = Math.random() * canvas.width;
+    this.y = 0;
+    this.width = 40;
+    this.height = 40;
+    this.amount = amount[Math.floor(Math.random() * amount.length)];
+    this.finalY = Math.random() * 200 + 200;
+  }
+  update() {
+    if (this.y < this.finalY) {
+      this.y++;
+    } else {
+      this.y = this.finalY;
+    }
+  }
+  draw() {
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+    ctx.fillStyle = "black";
+    ctx.font = "15px Arial";
+    ctx.fillText(this.amount, this.x + 7, this.y + 15);
+  }
+}
+function handleResources() {
+  if (score > winningScore) {
+    if (frame % 300 == 0) {
+      resources.push(new Resources());
+    }
+  }
+  for (let i = 0; i < resources.length; i++) {
+    resources[i].update();
+    resources[i].draw();
+    if (resources[i] && collision(resources[i], mouse)) {
+      numberOfresources += resources[i].amount;
+      floatingMessages.push(
+        new floatingMessage(
+          resources[i].amount,
+          resources[i].x,
+          resources[i].y,
+          10
+        )
+      );
+      floatingMessages.push(
+        new floatingMessage(resources[i].amount, 100, 42, 20)
+      );
+      floatingMessages.push(
+        new floatingMessage(resources[i].amount, 100, 72, 20)
+      );
+      resources.splice(i, 1);
+      i--;
+    }
+  }
+}
+
 // utilites
 function handleGameStatus() {
   ctx.fillStyle = "gold";
@@ -258,7 +366,7 @@ function handleGameStatus() {
   if (gameOver) {
     ctx.fillStyle = "black";
     ctx.font = "90px sans-serif";
-    ctx.fillText("GAMEOVER", 295, 380);
+    ctx.fillText("GAMEOVER", 235, 380);
   }
 }
 
@@ -267,11 +375,13 @@ function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "blue";
   ctx.fillRect(0, 0, controlsBar.width, controlsBar.height);
+  handleFloatingMessage();
   handleEnemies();
   handleProjectiles();
   handleGameGrid();
   handleGameStatus();
   handleDefenders();
+  handleResources();
   if (!gameOver) {
     requestAnimationFrame(animate);
   }
