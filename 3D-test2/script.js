@@ -21,10 +21,11 @@ function animate() {
 
 class Vec3d {
   
-  constructor(x,y,z){
+  constructor(x,y,z,w=1){
     this.x = x;
     this.y = y;
     this.z = z;
+    this.w = w;
   }
 
   static Vector_Mul(vecA,vecB){
@@ -40,6 +41,7 @@ class Vec3d {
     val.x = vecA.x / num;
     val.y = vecA.y / num;
     val.z = vecA.z / num;
+    val.w = vecA.w / num;
     return val;
   }
 
@@ -72,7 +74,7 @@ class Vec3d {
 
   static Vector_Cross(vecA,vecB){
     let val = new Vec3d();
-    val.x = (vecA.z * vecB.y) - (vecA.y * vecB.z);
+    val.x = (vecA.y * vecB.z) - (vecA.z * vecB.y);
     val.y = (vecA.z * vecB.x) - (vecA.x * vecB.z);
     val.z = (vecA.x * vecB.y) - (vecA.y * vecB.x);
     return val;
@@ -118,17 +120,12 @@ class Matrix {
 
   static Matrix_Mul_Vec(matrix,vec){
     let val = new Vec3d();
-    val.x = matrix.m[0][0] * vec.x + matrix.m[1][0] * vec.y + matrix.m[2][0] * vec.z + matrix.m[3][0];
-    val.y = matrix.m[0][1] * vec.x + matrix.m[1][1] * vec.y + matrix.m[2][1] * vec.z + matrix.m[3][1];
-    val.z = matrix.m[0][2] * vec.x + matrix.m[1][2] * vec.y + matrix.m[2][2] * vec.z + matrix.m[3][2];
+    val.x = matrix.m[0][0] * vec.x + matrix.m[1][0] * vec.y + matrix.m[2][0] * vec.z + matrix.m[3][0] * vec.w ;
+    val.y = matrix.m[0][1] * vec.x + matrix.m[1][1] * vec.y + matrix.m[2][1] * vec.z + matrix.m[3][1] * vec.w ;
+    val.z = matrix.m[0][2] * vec.x + matrix.m[1][2] * vec.y + matrix.m[2][2] * vec.z + matrix.m[3][2] * vec.w ;
     
-    let w =  matrix.m[0][3] * vec.x + matrix.m[1][3] * vec.y + matrix.m[2][3] * vec.z + matrix.m[3][3];
+    val.w =  matrix.m[0][3] * vec.x + matrix.m[1][3] * vec.y + matrix.m[2][3] * vec.z + matrix.m[3][3] * vec.w ;
 
-    if(  w != 0){
-      val.x /= w;
-      val.y /= w;
-      val.z /= w;
-    }
 
     return val;
   }
@@ -187,6 +184,10 @@ class Matrix {
     val.m[2][3] = 1;
     val.m[3][2] = -(fFar * fNear ) / (fFar - fNear);
     return val;
+  }
+
+  static Matrix_PointAt(vecUp,vecTarget,vecPos){
+    
   }
 
 }
@@ -276,26 +277,37 @@ class Engine {
 
       normal = Vec3d.Vector_Cross(line1,line2);
       normal = Vec3d.Vector_Normalize(normal);
-      let Vcamera = new Vec3d(0,0,-1);
+      let Vcamera = new Vec3d(0,0,0);
 
-      // Vcamera = Vec3d.Vector_Sub(triTransformed.p[0],Vcamera);
+      Vcamera = Vec3d.Vector_Sub(triTransformed.p[0],Vcamera);
 
       let viewdp = Vec3d.Vector_Dp(normal,Vcamera);
 
-      if( viewdp > 0 ){
+      if( viewdp < 0 ){
         let lightDir = new Vec3d(0,0,-1);
         lightDir = Vec3d.Vector_Normalize(lightDir);
 
-        let lightdp = Math.max(0.03,Vec3d.Vector_Dp(lightDir,normal));
-        let red = 95 * lightdp;
-        let blue = 132 * lightdp;
-        let green = 120 * lightdp;
+        let lightdp = Math.max(0.03,Vec3d.Vector_Dp(normal,lightDir));
+        let red = 0 * lightdp;
+        let blue = 255 * lightdp;
+        let green = 255 * lightdp;
         this.fillStyle = `rgb(${red},${green},${blue})`
         this.strokeStyle = `rgb(${red},${green},${blue})`
 
         triProjected.p[0] = Matrix.Matrix_Mul_Vec(matProj,triTransformed.p[0]);
         triProjected.p[1] = Matrix.Matrix_Mul_Vec(matProj,triTransformed.p[1]);
         triProjected.p[2] = Matrix.Matrix_Mul_Vec(matProj,triTransformed.p[2]);
+
+        if(triProjected.p[0].w != 0){
+          triProjected.p[0] = Vec3d.Vector_Div(triProjected.p[0], triProjected.p[0].w);
+        }
+        if(triProjected.p[1].w != 0){
+          triProjected.p[1] = Vec3d.Vector_Div(triProjected.p[1], triProjected.p[1].w);
+        }
+        if(triProjected.p[2].w != 0){
+          triProjected.p[2] = Vec3d.Vector_Div(triProjected.p[2], triProjected.p[2].w);
+        }
+
 
         let vOffset = new Vec3d(1,1,0);
         triProjected.p[0] = Vec3d.Vector_Add(triProjected.p[0],vOffset);
