@@ -6,6 +6,10 @@ const fileInput = document.getElementById("files");
 const v = [];
 const tri = [];
 
+window.addEventListener("keypress",(key)=>{
+  console.log(key);
+},false)
+
 fileInput.addEventListener("change",function(){
   const file = fileInput.files[0];
 

@@ -3,11 +3,59 @@ const canvas = document.getElementById("canvas4");
 const ctx = canvas.getContext("2d");
 canvas.width = 900;
 canvas.height = 600;
+let fYaw = 0;
 
+
+window.addEventListener("keypress",(e)=>{
+  // console.log(e.key);
+  if(e.key == "q"){
+    Engine.Vcamera.y += 0.2; 
+    
+    console.log(e.key);
+  }
+  if(e.key == "e"){
+    Engine.Vcamera.y -= 0.2; 
+    console.log(e.key);
+  }
+  if(e.key == "z"){
+    Engine.Vcamera.x += 0.2; 
+    
+    console.log(e.key);
+  }
+  if(e.key == "c"){
+    Engine.Vcamera.x -= 0.2; 
+    console.log(e.key);
+  }
+  let vForw = Vec3d.Vector_Mul(Engine.VlookDir,0.022)
+  if(e.key == "w"){
+    Engine.Vcamera = Vec3d.Vector_Add(Engine.Vcamera,vForw); 
+    console.log(e.key);
+  }
+  if(e.key == "s"){
+    Engine.Vcamera = Vec3d.Vector_Sub(Engine.Vcamera,vForw); 
+    console.log(e.key);
+  }
+  if(e.key == "a"){
+    fYaw -= 0.01; 
+    console.log(e.key);
+  }
+  if(e.key == "d"){
+    fYaw += 0.01; 
+    console.log(e.key);
+  }
+} ,false)
 
 // -------------FUNTIONS-----------------
 
+function randomNumGenerator(min, max) {
+  let result;
+  result = Math.random() * (max ) + (min / 2);
+  return result;
+}
+
+
 function animate() {
+
   ftheta += 0.012;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   Engine.INIT();
@@ -28,11 +76,11 @@ class Vec3d {
     this.w = w;
   }
 
-  static Vector_Mul(vecA,vecB){
+  static Vector_Mul(vecA,num){
     let val = new Vec3d();
-    val.x = vecA.x * vecB.x;
-    val.y = vecA.y * vecB.y;
-    val.z = vecA.z * vecB.z;
+    val.x = vecA.x * num;
+    val.y = vecA.y * num;
+    val.z = vecA.z * num;
     return val;
   }
 
@@ -188,6 +236,65 @@ class Matrix {
 
   static Matrix_PointAt(vecUp,vecTarget,vecPos){
     
+    let newFow = Vec3d.Vector_Sub(vecPos,vecTarget);
+    newFow = Vec3d.Vector_Normalize(newFow);
+
+    let a = Vec3d.Vector_Mul(vecUp,Vec3d.Vector_Dp(vecUp,newFow));
+    let newUp = Vec3d.Vector_Sub(a,vecUp);
+    newUp = Vec3d.Vector_Normalize(newUp);
+
+    let newRight = Vec3d.Vector_Cross(newUp,newFow);
+    newRight = Vec3d.Vector_Normalize(newRight);
+
+    let val = new Matrix();
+    val.m[0][0] = newRight.x;
+    val.m[0][1] = newRight.y;
+    val.m[0][2] = newRight.z;
+    val.m[0][3] = 0;
+
+    val.m[1][0] = newUp.x;
+    val.m[1][1] = newUp.y;
+    val.m[1][2] = newUp.z;
+    val.m[1][3] = 0;
+
+    val.m[2][0] = newFow.x;
+    val.m[2][1] = newFow.y;
+    val.m[2][2] = newFow.z;
+    val.m[2][3] = 0;
+
+    val.m[3][0] = vecPos.x;
+    val.m[3][1] = vecPos.y;
+    val.m[3][2] = vecPos.z;
+    val.m[3][3] = 1;
+
+    return val;
+
+  }
+
+  static Matrix_Invert(mat){
+    let val = new Matrix();
+    val.m[0][0] = mat.m[0][0];
+    val.m[0][1] = mat.m[1][0];
+    val.m[0][2] = mat.m[2][0];
+    val.m[0][3] = 0;
+
+    val.m[1][0] = mat.m[0][1];
+    val.m[1][1] = mat.m[1][1];
+    val.m[1][2] = mat.m[2][1];
+    val.m[1][3] = 0;
+
+    val.m[2][0] = mat.m[0][2];
+    val.m[2][1] = mat.m[1][2];
+    val.m[2][2] = mat.m[2][2];
+    val.m[2][3] = 0;
+
+    val.m[3][0] = -(mat.m[3][0] * mat.m[0][0] + mat.m[3][1] * mat.m[0][1] + mat.m[3][2] * mat.m[0][2]);
+    val.m[3][1] = -(mat.m[3][0] * mat.m[1][0] + mat.m[3][1] * mat.m[1][1] + mat.m[3][2] * mat.m[1][2]);
+    val.m[3][2] = -(mat.m[3][0] * mat.m[2][0] + mat.m[3][1] * mat.m[2][1] + mat.m[3][2] * mat.m[2][2]);
+    val.m[3][3] = 1;
+
+    return val;
+
   }
 
 }
@@ -223,11 +330,14 @@ class Mesh {
 
 class Engine {
   constructor(){
-    this.Vcamera = new Vec3d(0,0,0);
+  
     this.lightDir = new Vec3d(0,0,-1);
     this.fillStyle = "black";
     this.strokeStyle = "black";
   };
+  static Vcamera = new Vec3d(0,0,0);
+  static VlookDir;
+
 
   static DrawTriangles(a,b,c){
   ctx.strokeStyle = this.strokeStyle;
@@ -266,6 +376,7 @@ class Engine {
     for(let i = 0;i < BoxMesh.m.length;i++){
       let triTransformed = new Triangle();
       let triProjected = new Triangle();
+      let triViewed = new Triangle();
       triTransformed.p[0] = Matrix.Matrix_Mul_Vec(matWorld2,BoxMesh.m[i].p[0]);
       triTransformed.p[1] = Matrix.Matrix_Mul_Vec(matWorld2,BoxMesh.m[i].p[1]);
       triTransformed.p[2] = Matrix.Matrix_Mul_Vec(matWorld2,BoxMesh.m[i].p[2]);
@@ -277,11 +388,21 @@ class Engine {
 
       normal = Vec3d.Vector_Cross(line1,line2);
       normal = Vec3d.Vector_Normalize(normal);
-      let Vcamera = new Vec3d(0,0,0);
+      // this.Vcamera = new Vec3d(0,0,0);
+      let Vtarget = new Vec3d(0,0,1);
+      let Vup = new Vec3d(0,1,0);
+      let matRotY = Matrix.Matrix_RotateY(fYaw);
+      this.VlookDir = Matrix.Matrix_Mul_Vec(matRotY,Vtarget);
+      Vtarget = Vec3d.Vector_Add(this.Vcamera,this.VlookDir);
 
-      Vcamera = Vec3d.Vector_Sub(triTransformed.p[0],Vcamera);
 
-      let viewdp = Vec3d.Vector_Dp(normal,Vcamera);
+      let matCam = Matrix.Matrix_PointAt(Vup,Vtarget,this.Vcamera);
+
+      let matView = Matrix.Matrix_Invert(matCam);
+
+      let camera = Vec3d.Vector_Sub(triTransformed.p[0],this.Vcamera);
+
+      let viewdp = Vec3d.Vector_Dp(normal,camera);
 
       if( viewdp < 0 ){
         let lightDir = new Vec3d(0,0,-1);
@@ -291,12 +412,16 @@ class Engine {
         let red = 0 * lightdp;
         let blue = 255 * lightdp;
         let green = 255 * lightdp;
-        this.fillStyle = `rgb(${red},${green},${blue})`
-        this.strokeStyle = `rgb(${red},${green},${blue})`
+        this.fillStyle = `rgb(${red},${green},${blue})`;
+        this.strokeStyle = `rgb(${red},${green},${blue})`;
 
-        triProjected.p[0] = Matrix.Matrix_Mul_Vec(matProj,triTransformed.p[0]);
-        triProjected.p[1] = Matrix.Matrix_Mul_Vec(matProj,triTransformed.p[1]);
-        triProjected.p[2] = Matrix.Matrix_Mul_Vec(matProj,triTransformed.p[2]);
+        triViewed.p[0] = Matrix.Matrix_Mul_Vec(matView,triTransformed.p[0]);
+        triViewed.p[1] = Matrix.Matrix_Mul_Vec(matView,triTransformed.p[1]);
+        triViewed.p[2] = Matrix.Matrix_Mul_Vec(matView,triTransformed.p[2]);
+
+        triProjected.p[0] = Matrix.Matrix_Mul_Vec(matProj,triViewed.p[0]);
+        triProjected.p[1] = Matrix.Matrix_Mul_Vec(matProj,triViewed.p[1]);
+        triProjected.p[2] = Matrix.Matrix_Mul_Vec(matProj,triViewed.p[2]);
 
         if(triProjected.p[0].w != 0){
           triProjected.p[0] = Vec3d.Vector_Div(triProjected.p[0], triProjected.p[0].w);
